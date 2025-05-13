@@ -1,122 +1,149 @@
-# personal_finance_tracker.py
+# === Personal Finance Tracker ===
+# This script allows users to track income, expenses, set category budgets,
+# and generate monthly financial reports.
 
+# --- Base Transaction Class ---
 class Transaction:
-    """Base class for transactions"""
-    def __init__(self, amount, category, description):
-        self._amount = amount  # Encapsulation with private attribute
-        self._category = category
-        self._description = description
+    def __init__(self, amount, category, date):
+        self.amount = amount  # Amount of the transaction
+        self.category = category  # Category name or income source
+        self.date = date  # Date of the transaction
 
     def display(self):
-        return f"Transaction: {self._description} | Amount: {self._amount} | Category: {self._category}"
+        # Returns a string summary of the transaction
+        return f"{self.date}: {self.category} - ${self.amount:.2f}"
 
-    def edit(self, amount, category, description):
-        self._amount = amount
-        self._category = category
-        self._description = description
 
-class Expense(Transaction):  # Inheritance
-    """Represents an expense transaction"""
-    def __init__(self, amount, category, description):
-        super().__init__(-abs(amount), category, description)  # Expenses are negative
+# --- Expense Class (inherits from Transaction) ---
+class Expense(Transaction):
+    def display(self):
+        return f"Expense -> {super().display()}"
 
-    def display(self):  # Polymorphism
-        return f"Expense - {self._description}: {self._amount} ({self._category})"
 
-class Income(Transaction):  # Inheritance
-    """Represents an income transaction"""
-    def __init__(self, amount, category, description):
-        super().__init__(abs(amount), category, description)  # Income is positive
+# --- Income Class (inherits from Transaction) ---
+class Income(Transaction):
+    def display(self):
+        return f"Income -> {super().display()}"
 
-    def display(self):  # Polymorphism
-        return f"Income - {self._description}: {self._amount} ({self._category})"
 
-transactions = []  # Stores all transactions
+# --- Category Class (handles budget tracking) ---
+class Category:
+    def __init__(self, name, budget_limit=0):
+        self.name = name  # Category name (e.g., Food, Rent)
+        self.budget_limit = budget_limit  # Optional spending limit
+        self.total_spent = 0  # Running total of expenses in this category
 
-def add_transaction(transaction):
-    """Adds a transaction to the list"""
-    transactions.append(transaction)
+    def set_budget(self, limit):
+        self.budget_limit = limit  # Update the budget limit
 
-def edit_transaction(index):
-    """Edits an existing transaction"""
-    if 0 <= index < len(transactions):
-        amount = float(input("Enter new amount: "))
-        category = input("Enter new category: ")
-        description = input("Enter new description: ")
-        transactions[index].edit(amount, category, description)
-        print("Transaction updated!")
-    else:
-        print("Invalid transaction index.")
+    def add_expense(self, amount):
+        self.total_spent += amount  # Update spending total
+        # Warn if spending exceeds budget
+        if self.budget_limit > 0 and self.total_spent > self.budget_limit:
+            print(f"⚠ WARNING: You have exceeded your budget for '{self.name}'!")
 
-def delete_transaction(index):
-    """Deletes a transaction"""
-    if 0 <= index < len(transactions):
-        transactions.pop(index)
-        print("Transaction deleted!")
-    else:
-        print("Invalid transaction index.")
+    def display_budget_status(self):
+        # Return formatted string of the category's budget status
+        return f"{self.name}: Budget Limit = ${self.budget_limit:.2f}, Spent = ${self.total_spent:.2f}"
 
-def generate_summary():
-    """Generates a simple financial summary"""
-    total_income = sum(t._amount for t in transactions if isinstance(t, Income))
-    total_expense = sum(t._amount for t in transactions if isinstance(t, Expense))
-    balance = total_income + total_expense
 
-    return f"\n--- Monthly Summary ---\nTotal Income: {total_income}\nTotal Expenses: {total_expense}\nBalance: {balance}\n"
+# --- FinanceManager Class (main logic of the app) ---
+class FinanceManager:
+    def __init__(self):
+        self.transactions = []  # List of all income and expense records
+        self.categories = {}  # Dictionary of category name -> Category object
 
-# Console-based menu system
+    def add_category(self, name, budget_limit=0):
+        self.categories[name] = Category(name, budget_limit)
+
+    def add_transaction(self, transaction):
+        self.transactions.append(transaction)
+
+        if isinstance(transaction, Expense):
+            # Update budget for the category if it exists
+            if transaction.category in self.categories:
+                self.categories[transaction.category].add_expense(transaction.amount)
+
+            # Check if total expenses exceed income
+            total_income = sum(t.amount for t in self.transactions if isinstance(t, Income))
+            total_expenses = sum(t.amount for t in self.transactions if isinstance(t, Expense))
+
+            if total_expenses > total_income:
+                print("⚠ WARNING: You have insufficient balance! Expenses exceed income.")
+
+    def generate_report(self):
+        # Calculate summary values
+        total_income = sum(t.amount for t in self.transactions if isinstance(t, Income))
+        total_expenses = sum(t.amount for t in self.transactions if isinstance(t, Expense))
+        balance = total_income - total_expenses
+
+        # Print financial summary
+        print("\n===== Monthly Summary Report =====")
+        print(f"Total Income: ${total_income:.2f}")
+        print(f"Total Expenses: ${total_expenses:.2f}")
+        print(f"Balance: ${balance:.2f}")
+        print("\nBudget Status:")
+        for category in self.categories.values():
+            print(category.display_budget_status())
+
+    def list_transactions(self):
+        print("\n===== Transactions =====")
+        for t in self.transactions:
+            print(t.display())
+
+
+# --- Main interactive user interface ---
 def main():
+    fm = FinanceManager()
+
     while True:
-        print("\nPersonal Finance Tracker")
-        print("1. Add Expense")
-        print("2. Add Income")
-        print("3. View Transactions")
-        print("4. Edit Transaction")
-        print("5. Delete Transaction")
-        print("6. View Summary Report")
-        print("7. Exit")
+        # Display menu
+        print("\n==== Personal Finance Tracker ====")
+        print("1. Add Income")
+        print("2. Add Expense")
+        print("3. Set Budget for a Category")
+        print("4. View Transactions")
+        print("5. View Monthly Summary Report")
+        print("6. Exit")
 
-        choice = input("Enter choice: ")
+        choice = input("Choose an option: ")
 
-        if choice == '1':
-            amount = float(input("Enter amount: "))
-            category = input("Enter category: ")
-            description = input("Enter description: ")
-            add_transaction(Expense(amount, category, description))
-            print("Expense added!")
+        # Handle menu selection
+        if choice == "1":
+            amount = float(input("Enter income amount: "))
+            category = input("Enter income source (e.g., Salary, Freelance): ")
+            date = input("Enter date (YYYY-MM-DD): ")
+            fm.add_transaction(Income(amount, category, date))
 
-        elif choice == '2':
-            amount = float(input("Enter amount: "))
-            category = input("Enter category: ")
-            description = input("Enter description: ")
-            add_transaction(Income(amount, category, description))
-            print("Income added!")
+        elif choice == "2":
+            amount = float(input("Enter expense amount: "))
+            category = input("Enter expense category: ")
+            date = input("Enter date (YYYY-MM-DD): ")
 
-        elif choice == '3':
-            if transactions:
-                print("\n--- Transactions ---")
-                for i, t in enumerate(transactions):
-                    print(f"{i}. {t.display()}")
+            if category not in fm.categories:
+                print("Category not found. Add a budget first!")
             else:
-                print("No transactions recorded.")
+                fm.add_transaction(Expense(amount, category, date))
 
-        elif choice == '4':
-            index = int(input("Enter transaction index to edit: "))
-            edit_transaction(index)
+        elif choice == "3":
+            category = input("Enter category name: ")
+            budget = float(input(f"Set budget for {category}: "))
+            fm.add_category(category, budget)
 
-        elif choice == '5':
-            index = int(input("Enter transaction index to delete: "))
-            delete_transaction(index)
+        elif choice == "4":
+            fm.list_transactions()
 
-        elif choice == '6':
-            print(generate_summary())
+        elif choice == "5":
+            fm.generate_report()
 
-        elif choice == '7':
-            print("Exiting program. Goodbye!")
+        elif choice == "6":
+            print("Exiting program. Have a nice day!")
             break
 
         else:
-            print("Invalid choice. Please enter a number between 1 and 7.")
+            print("Invalid choice. Please try again.")
 
+
+# Entry point of the program
 if __name__ == "__main__":
     main()
