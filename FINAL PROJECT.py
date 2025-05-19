@@ -1,8 +1,6 @@
-# === Personal Finance Tracker ===
-# This script allows users to track income, expenses, set category budgets,
-# and generate monthly financial reports.
+# This script allows users to track income, expenses, set category budgets,and generate monthly financial reports.
 
-# --- Base Transaction Class ---
+# --- Base Class: Transaction ---
 class Transaction:
     def __init__(self, amount, category, date):
         self.amount = amount  # Amount of the transaction
@@ -14,13 +12,13 @@ class Transaction:
         return f"{self.date}: {self.category} - ${self.amount:.2f}"
 
 
-# --- Expense Class (inherits from Transaction) ---
+# --- Derived Class: Expense ---
 class Expense(Transaction):
     def display(self):
         return f"Expense -> {super().display()}"
 
 
-# --- Income Class (inherits from Transaction) ---
+# --- Derived Class: Income ---
 class Income(Transaction):
     def display(self):
         return f"Income -> {super().display()}"
@@ -99,11 +97,11 @@ def main():
     while True:
         # Display menu
         print("\n==== Personal Finance Tracker ====")
-        print("1. Add Income")
-        print("2. Add Expense")
-        print("3. Set Budget for a Category")
-        print("4. View Transactions")
-        print("5. View Monthly Summary Report")
+        print("1. Add Income") #1st Add Income first [e.g: 3000 (Salary)]
+        print("2. Add Expense") #3rd Add Expenses [e.g: 150 (Food)]
+        print("3. Set Budget for a Category") #2nd Set Budget for Category [e.g: 150 (Food)]
+        print("4. View Transactions") #This will display all the transaction for Income and Expenses
+        print("5. View Monthly Summary Report") #This will display the summary report
         print("6. Exit")
 
         choice = input("Choose an option: ")
